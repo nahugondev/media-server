@@ -49,8 +49,8 @@ services:
     volumes:
       - ./jellyfin/data:/config
       - ./jellyfin/cache:/cache
-      - ./medias/tvseries:/data/tvshows
-      - ./medias/movies:/data/movies
+      - /home/nathan/medias/tvseries:/data/tvshows
+      - /home/nathan/medias/movies:/data/movies
     restart: 'unless-stopped'
 
   qbittorrent:
@@ -65,7 +65,7 @@ services:
     volumes:
       - ./qbittorrent:/config
       - ./downloads:/downloads
-      - ./medias/movies:/downloaded
+      - /home/nathan/medias/movies:/downloaded
     depends_on:
       - gluetun
     restart: always
