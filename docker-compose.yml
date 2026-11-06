@@ -14,10 +14,10 @@ services:
       - 6881:6881
       - 6881:6881/udp
       #- 8096:8096/tcp #Jellyfin
-      - 8085:8085 # qbittorrent
-      - 9117:9117 # Jackett
-      - 8989:8989 # Sonarr
-      - 9696:9696 # Prowlarr
+      - 127.0.0.1:8085:8085 # qbittorrent (accès local / tunnel SSH)
+      - 127.0.0.1:9117:9117 # Jackett
+      - 127.0.0.1:8989:8989 # Sonarr
+      - 127.0.0.1:9696:9696 # Prowlarr
     volumes:
       - ./gluetun:/gluetun
     environment:
@@ -38,19 +38,65 @@ services:
       # Server list updater
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
       - UPDATER_PERIOD=24h
+    networks:
+      - default
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web_web"
+      # Mot de passe Traefik (hash généré par scripts/set-admin-auth.sh)
+      - "traefik.http.middlewares.admin-auth.basicauth.users=${ADMIN_BASICAUTH}"
+      # qBittorrent
+      - "traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.nahugondev.fr`)"
+      - "traefik.http.routers.qbittorrent.entrypoints=websecure"
+      - "traefik.http.routers.qbittorrent.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.qbittorrent.middlewares=admin-auth"
+      - "traefik.http.routers.qbittorrent.service=qbittorrent"
+      - "traefik.http.services.qbittorrent.loadbalancer.server.port=8085"
+      # Sonarr
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.nahugondev.fr`)"
+      - "traefik.http.routers.sonarr.entrypoints=websecure"
+      - "traefik.http.routers.sonarr.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.sonarr.middlewares=admin-auth"
+      - "traefik.http.routers.sonarr.service=sonarr"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      # Prowlarr
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.nahugondev.fr`)"
+      - "traefik.http.routers.prowlarr.entrypoints=websecure"
+      - "traefik.http.routers.prowlarr.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prowlarr.middlewares=admin-auth"
+      - "traefik.http.routers.prowlarr.service=prowlarr"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      # Jackett
+      - "traefik.http.routers.jackett.rule=Host(`jackett.nahugondev.fr`)"
+      - "traefik.http.routers.jackett.entrypoints=websecure"
+      - "traefik.http.routers.jackett.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.jackett.middlewares=admin-auth"
+      - "traefik.http.routers.jackett.service=jackett"
+      - "traefik.http.services.jackett.loadbalancer.server.port=9117"
     restart: unless-stopped
 
   jellyfin:
     image: jellyfin/jellyfin
     container_name: jellyfin
     ports:
-      - 8096:8096/tcp
-      - 7359:7359/udp
+      - 127.0.0.1:8096:8096/tcp # accès public via https://jellyfin.nahugondev.fr
     volumes:
       - ./jellyfin/data:/config
       - ./jellyfin/cache:/cache
       - /home/nathan/medias/tvseries:/data/tvshows
       - /home/nathan/medias/movies:/data/movies
+    networks:
+      - default
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web_web"
+      # Pas de basic auth : Jellyfin a sa propre connexion et ses applis TV/mobile ne la gèrent pas
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.nahugondev.fr`)"
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
     restart: 'unless-stopped'
 
   qbittorrent:
@@ -110,3 +156,8 @@ services:
     volumes:
       - ./prowlarr/data:/config
     restart: unless-stopped
+
+networks:
+  web:
+    name: web_web
+    external: true
