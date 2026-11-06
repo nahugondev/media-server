@@ -11,8 +11,6 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - 6881:6881
-      - 6881:6881/udp
       #- 8096:8096/tcp #Jellyfin
       - 127.0.0.1:8085:8085 # qbittorrent (accès local / tunnel SSH)
       - 127.0.0.1:9117:9117 # Jackett
